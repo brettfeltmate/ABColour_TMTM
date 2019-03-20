@@ -56,8 +56,10 @@ CREATE TABLE trials (
 	practicing text not null,
 	block_num integer not null,
 	trial_num integer not null,
-	target_duration integer not null,
-	mask_duration integer not null,
+	itoa text not null,
+	ttoa text not null,
+	target_duration text not null,
+	mask_duration text not null,
 	t1_identity text not null,
 	t2_identity text not null,
 	t1_identity_response text not null,
@@ -73,5 +75,6 @@ CREATE TABLE trials (
 	t1_ang_err text not null,
 	t1_colour_rt text not null,
 	t2_ang_err text not null,
-	t2_colour_rt text not null
+	t2_colour_rt text not null,
+	t1_performance_practice text not null
 );

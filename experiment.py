@@ -14,6 +14,7 @@ from klibs.KLGraphics.KLDraw import *
 from klibs.KLGraphics.colorspaces import const_lum as colors
 from klibs.KLResponseCollectors import ResponseCollector
 from klibs.KLEventInterface import TrialEventTicket as ET
+from klibs.KLExceptions import TrialException
 from klibs.KLCommunication import message
 from klibs.KLTime import CountDown
 # Import required external libraries
@@ -46,7 +47,7 @@ class ABColour_TMTM(klibs.Experiment):
 		wheel_size = int(P.screen_y * 0.75)
 		cursor_size = deg_to_px(1)
 		cursor_thickness = deg_to_px(0.3)
-		target_size = deg_to_px(2)
+		target_size = deg_to_px(1)
 
 
 		# Initilize drawbjects
@@ -77,11 +78,11 @@ class ABColour_TMTM(klibs.Experiment):
 		self.t1_id_request = "What was the first number?"
 		self.t2_id_request = "What was the second number?"
 		self.t1_col_request = "What was the first colour?"
-		self.t2_col_request = "What was the second colour"
-		self.prac_identity_instruct = "\nIn this block, you will be asked to report what number were presented."
-		self.prac_colour_instruct = "\nIn this block, you will be asked to report what colour was presented."
-		self.test_identity_instruct = "\nIn this block, you will be asked to report which two numbers were presented."
-		self.test_colour_instruct = "\nIn this block, you will be asked to report which two colours were presented."
+		self.t2_col_request = "What was the second colour?"
+		self.prac_identity_instruct = "\nIn this block, you will be asked to report what number was presented.\nIf you're unsure, make your best guess."
+		self.prac_colour_instruct = "\nIn this block, you will be asked to report what colour was presented.\nIf you're unsure, make your best guess."
+		self.test_identity_instruct = "\nIn this block, you will be asked to report which two numbers were presented.\nIf you're unsure, make your best guess."
+		self.test_colour_instruct = "\nIn this block, you will be asked to report which two colours were presented.\nIf you're unsure, make your best guess."
 
 		# Initialize ResponseCollectors
 		self.t1_identity_rc = ResponseCollector(uses=RC_KEYPRESS)
@@ -100,14 +101,27 @@ class ABColour_TMTM(klibs.Experiment):
 			sdl2.SDLK_7,sdl2.SDLK_8,sdl2.SDLK_9]
 		)
 
-		# 
+		# Inserting practice blocks requires a pre-defined trial count; but in our case they are of an undefined length,
+		# lasting for as long as it takes participants to reach a performance threshold. So, initially they are of length 1
+		# but trials are inserted later on depending on participant performance.
 		if P.run_practice_blocks:
 			self.insert_practice_block([1,3], trial_counts=1)
 
-		# For the time being, initial block type must be manually set here
-		self.block_type = COLOUR
+		# Randomly select starting condition
+		self.block_type = random.choice([COLOUR,IDENTITY])
 
 	def block(self):
+		if not P.practicing:
+			if P.trial_number % 60 == 0:
+				rest_txt = "Whew, go ahead a take a break!\nPress any key when you're ready to continue."
+				rest_msg = message(rest_txt,align='center',blit_txt=False)
+				fill()
+				blit(rest_msg,5,P.screen_c)
+				flip()
+				any_key()
+		
+		
+		
 		self.t1_performance = 0
 
 
@@ -144,13 +158,20 @@ class ABColour_TMTM(klibs.Experiment):
 		flip()
 		any_key()
 
+		# Pre-run: First 10 practice trials, no performance adjustments
 		self.pre_run_complete = False
+		# Practice: Subsequent practice trials wherein performance is adjusted
 		self.practice_complete = False
 		self.practice_trial_num = 1
+		# Reset T1 performance each practice block
 		self.t1_performance = 0
 		
+		# The following block manually inserts trials one at a time
+		# during which performance is checked and adjusted for.
 		if P.practicing:
 			while P.practicing:
+				self.itoa = random.choice([100,200,300])
+				self.ttoa = random.choice([120,240,360,480,600])
 
 				self.setup_response_collector()
 				self.trial_prep()
@@ -163,7 +184,7 @@ class ABColour_TMTM(klibs.Experiment):
 				
 				self.evm.stop_clock()
 				self.trial_clean_up()
-
+				# Once practice is complete, the loop is exited
 				if self.practice_complete:
 					P.practicing = False
 
@@ -185,7 +206,7 @@ class ABColour_TMTM(klibs.Experiment):
 
 		# Configure colour collector
 		# Because colours are randomly selected on a trial by trial basis
-		# most properties of colouring_rc need to be assigned w/n trial_prep()
+		# most properties of colouring_rc need to be assigned within trial_prep()
 		self.t1_colouring_rc.terminate_after = [10, TK_S]
 		self.t2_colouring_rc.terminate_after = [10, TK_S]
 
@@ -239,22 +260,24 @@ class ABColour_TMTM(klibs.Experiment):
 		else:
 			self.target_duration = self.col_target_duration
 			self.mask_duration = self.col_mask_duration
-		
+
 		# Initialize EventManager
 		if P.practicing: # T2 not present during practice blocks
-			events = [[1000, "T1_on"]]
+			events = [[self.itoa, "T1_on"]]
 			events.append([events[-1][0] + self.target_duration, 'T1_off'])
 			events.append([events[-1][0] + self.isi, 'T1_mask_on'])
 			events.append([events[-1][0] + self.mask_duration, 'T1_mask_off'])
+			events.append([events[-1][0] + 300, 'response_foreperiod'])
 		else:
-			events = [[1000, 'T1_on']]
+			events = [[self.itoa, 'T1_on']]
 			events.append([events[-1][0] + self.target_duration, 'T1_off'])
 			events.append([events[-1][0] + self.isi, 'T1_mask_on'])
 			events.append([events[-1][0] + self.mask_duration, 'T1_mask_off'])
-			events.append([events[-4][0] + self.soa, 'T2_on']) # SOA = Time between onset of T1 & T2
+			events.append([events[-4][0] + self.ttoa, 'T2_on']) # SOA = Time between onset of T1 & T2
 			events.append([events[-1][0] + self.target_duration, 'T2_off'])
 			events.append([events[-1][0] + self.isi, 'T2_mask_on'])
 			events.append([events[-1][0] + self.mask_duration, 'T2_mask_off'])
+			events.append([events[-1][0] + 300, 'response_foreperiod'])
 
 		# Stream begins 1000ms after fixation
 		for e in events:
@@ -263,40 +286,71 @@ class ABColour_TMTM(klibs.Experiment):
 		# Prepare stream
 		self.tmtm_stream = self.prep_stream()
 
+		# Present fixation & wait for initiation
+		self.present_fixation()
+
 	def trial(self):
 		# Hide cursor during trial
 		hide_mouse_cursor()
 
-		# Present fixation & wait 1s before presenting stream
-		self.present_fixation()
+		# Wait some foreperiod before presenting T1
+		while self.evm.before('T1_on', True): ui_request()
+
+		# Present T1
+		fill()
+		blit(self.tmtm_stream['t1_target'], registration=5, location=P.screen_c)
+		flip()		
+
+		# Don't do anything during T1 presentation
+		while self.evm.before('T1_off', True): ui_request()
 		
-		while self.evm.before('T1_on', True):
-			pass
+		# Remove T1
+		fill()
+		flip()
 
-		while self.evm.before('T1_off', True):
-			fill()
-			blit(self.tmtm_stream['t1_target'], registration=5, location=P.screen_c)
-			flip()
+		# After one refresh rate (how long it takes to remove T1) present mask
+		fill()
+		blit(self.tmtm_stream['t1_mask'], registration=5, location=P.screen_c)
+		flip()
 
-		while self.evm.before('T1_mask_off', True):
-			fill()
-			blit(self.tmtm_stream['t1_mask'], registration=5, location=P.screen_c)
-			flip()
+		# Don't do anything during presentation
+		while self.evm.before('T1_mask_off', True): ui_request()
+		
+		# Remove mask
+		fill()
+		flip()
 
+		# If not practicing, present T2
 		if not P.practicing:
 			
-			while self.evm.before('T2_on', True):
-				pass
+			# After TTOA is up, present T2
+			while self.evm.before('T2_on', True): ui_request()
 			
-			while self.evm.before('T2_off', True):
-				fill()
-				blit(self.tmtm_stream['t2_target'], registration=5, location=P.screen_c)
-				flip()
+			fill()
+			blit(self.tmtm_stream['t2_target'], registration=5, location=P.screen_c)
+			flip()
 
-			while self.evm.before('T2_mask_off', True):
-				fill()
-				blit(self.tmtm_stream['t2_mask'], registration=5, location=P.screen_c)
-				flip()
+			# Don't do anything during presentation
+			while self.evm.before('T2_off', True): ui_request()
+
+			# Remove T2
+			fill()
+			flip()
+
+			# After one refresh rate, present mask
+			fill()
+			blit(self.tmtm_stream['t2_mask'], registration=5, location=P.screen_c)
+			flip()
+
+			# Don't do anything during presentation
+			while self.evm.before('T2_mask_off', True): ui_request()
+
+			# Remove mask
+			fill()
+			flip()
+
+		# Wait 1/3 second before asking for responses
+		while self.evm.before('response_foreperiod', True): ui_request()
 
 		# Request & record responses
 		if self.block_type == IDENTITY:
@@ -346,7 +400,7 @@ class ABColour_TMTM(klibs.Experiment):
 				# As numeric identities have 9 possible values, similarly the colour wheel can 
 				# be thought of as having 9 'bins' (each 40º wide). Colour responses are labelled
 				# as 'correct' if their angular error does not exceed 20º in either direction.
-				if (t1_response_err >= -20) & (t1_response_err <= 20):
+				if (abs(t1_response_err) <= 20):
 					self.t1_performance += 1
 
 		clear()
@@ -355,6 +409,8 @@ class ABColour_TMTM(klibs.Experiment):
 			"practicing": str(P.practicing),
 			"block_num": P.block_number,
 			"trial_num": P.trial_number,
+			"itoa": self.itoa,
+			"ttoa": self.ttoa,
 			"target_duration": self.target_duration,
 			"mask_duration": self.mask_duration,
 			"t1_identity": self.t1_identity,
@@ -372,7 +428,8 @@ class ABColour_TMTM(klibs.Experiment):
 			"t1_ang_err": t1_response_err,
 			"t1_colour_rt": t1_response_err_rt,
 			"t2_ang_err": t2_response_err,
-			"t2_colour_rt": t2_response_err_rt
+			"t2_colour_rt": t2_response_err_rt,
+			"t1_performance_practice": self.t1_performance if P.practicing else 'NA'
 		}
 
 	def trial_clean_up(self):
@@ -424,6 +481,8 @@ class ABColour_TMTM(klibs.Experiment):
 		fill()
 		blit(self.fixation, location=P.screen_c, registration=5)
 		flip()
+
+		any_key()
 
 	def prep_stream(self):
 		# Dynamically assign target colouring
@@ -479,7 +538,7 @@ class ABColour_TMTM(klibs.Experiment):
 
 	def generate_mask(self):
 		# Set mask size
-		canvas_size = deg_to_px(3)
+		canvas_size = deg_to_px(1.5)
 		# Set cell size
 		cell_size = canvas_size / 4 # Mask comprised of 16 smaller cells arranged 4x4
 		# Each cell has a black outline

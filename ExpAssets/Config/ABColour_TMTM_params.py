@@ -3,7 +3,7 @@
 #########################################
 # Runtime Settings
 #########################################
-collect_demographics = False
+collect_demographics = True
 manual_demographics_collection = False
 manual_trial_generation = False
 run_practice_blocks = True
@@ -39,7 +39,7 @@ saccadic_motion_threshold = 0.15
 # Experiment Structure
 #########################################
 multi_session_project = False
-trials_per_block = 10
+trials_per_block = 360
 blocks_per_experiment = 2
 table_defaults = {} 
 
