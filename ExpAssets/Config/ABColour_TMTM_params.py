@@ -41,7 +41,7 @@ saccadic_motion_threshold = 0.15
 multi_session_project = False
 trials_per_block = 360
 blocks_per_experiment = 2
-table_defaults = {} 
+table_defaults = {}
 
 #########################################
 # Development Mode Settings

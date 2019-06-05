@@ -16,7 +16,7 @@ from klibs.KLResponseCollectors import ResponseCollector
 from klibs.KLEventInterface import TrialEventTicket as ET
 from klibs.KLExceptions import TrialException
 from klibs.KLCommunication import message
-from klibs.KLTime import CountDown
+from klibs.KLTime import CountDown, Stopwatch
 # Import required external libraries
 import sdl2
 import time
@@ -47,7 +47,7 @@ class ABColour_TMTM(klibs.Experiment):
 		wheel_size = int(P.screen_y * 0.75)
 		cursor_size = deg_to_px(1)
 		cursor_thickness = deg_to_px(0.3)
-		target_size = deg_to_px(1)
+		target_size = deg_to_px(0.8)
 
 
 		# Initilize drawbjects
@@ -63,7 +63,7 @@ class ABColour_TMTM(klibs.Experiment):
 		# Stimulus presentation durations (intervals of 16.7ms refresh rate)
 		self.id_target_duration = P.refresh_time * 5 # 83.3ms
 		self.id_mask_duration = P.refresh_time
-		self.col_target_duration = P.refresh_time * 10 # 167ms
+		self.col_target_duration = P.refresh_time * 5 # 167ms
 		self.col_mask_duration = P.refresh_time
 		self.isi = P.refresh_time # ISI = inter-stimulus interval (target offset -> mask onset)
 
@@ -72,7 +72,7 @@ class ABColour_TMTM(klibs.Experiment):
 		# w/ the target colour and then passed to their ResponseCollectors, respectively.
 		self.t1_dummy = Ellipse(width=1)
 		self.t2_dummy = Ellipse(width=1)
-		
+
 		# Experiment messages
 		self.anykey_txt = "{0}\nPress any key to continue."
 		self.t1_id_request = "What was the first number?"
@@ -108,7 +108,7 @@ class ABColour_TMTM(klibs.Experiment):
 			self.insert_practice_block([1,3], trial_counts=1)
 
 		# Randomly select starting condition
-		self.block_type = random.choice([COLOUR,IDENTITY])
+		self.block_type = random.choice([IDENTITY,COLOUR])
 
 	def block(self):
 		if not P.practicing:
@@ -119,9 +119,9 @@ class ABColour_TMTM(klibs.Experiment):
 				blit(rest_msg,5,P.screen_c)
 				flip()
 				any_key()
-		
-		
-		
+
+
+
 		self.t1_performance = 0
 
 
@@ -129,7 +129,7 @@ class ABColour_TMTM(klibs.Experiment):
 		block_txt = "Block {0} of {1}".format(P.block_number, P.blocks_per_experiment)
 		progress_txt = self.anykey_txt.format(block_txt)
 
-		if P.practicing: 
+		if P.practicing:
 			progress_txt += "\n(This is a practice block)"
 
 		progress_msg = message(progress_txt, align='center', blit_txt=False)
@@ -165,7 +165,7 @@ class ABColour_TMTM(klibs.Experiment):
 		self.practice_trial_num = 1
 		# Reset T1 performance each practice block
 		self.t1_performance = 0
-		
+
 		# The following block manually inserts trials one at a time
 		# during which performance is checked and adjusted for.
 		if P.practicing:
@@ -176,12 +176,12 @@ class ABColour_TMTM(klibs.Experiment):
 				self.setup_response_collector()
 				self.trial_prep()
 				self.evm.start_clock()
-				
+
 				try:
 					self.trial()
 				except TrialException:
 					pass
-				
+
 				self.evm.stop_clock()
 				self.trial_clean_up()
 				# Once practice is complete, the loop is exited
@@ -193,16 +193,16 @@ class ABColour_TMTM(klibs.Experiment):
 	def setup_response_collector(self):
 		# Configure identity collector
 		self.t1_identity_rc.terminate_after = [10, TK_S] # Waits 10s for response
-		self.t1_identity_rc.display_callback = self.identity_callback # Continuously draw images to screen	
+		self.t1_identity_rc.display_callback = self.identity_callback # Continuously draw images to screen
 		self.t1_identity_rc.display_kwargs = {'target':"T1"} # Passed as arg when identity_callback() is called
 		self.t1_identity_rc.keypress_listener.key_map = self.keymap # Assign key mappings
 		self.t1_identity_rc.keypress_listener.interrupts = True # Terminates listener after valid response
 
-		self.t2_identity_rc.terminate_after = [10, TK_S] 
+		self.t2_identity_rc.terminate_after = [10, TK_S]
 		self.t2_identity_rc.display_callback = self.identity_callback
 		self.t2_identity_rc.display_kwargs = {'target':"T2"}
-		self.t2_identity_rc.keypress_listener.key_map = self.keymap 
-		self.t2_identity_rc.keypress_listener.interrupts = True 
+		self.t2_identity_rc.keypress_listener.key_map = self.keymap
+		self.t2_identity_rc.keypress_listener.interrupts = True
 
 		# Configure colour collector
 		# Because colours are randomly selected on a trial by trial basis
@@ -213,18 +213,18 @@ class ABColour_TMTM(klibs.Experiment):
 	def trial_prep(self):
 		# Prepare colour wheels
 		self.t1_wheel.rotation = random.randrange(0,360) # Randomly rotate wheel to prevent location biases
-		self.t2_wheel.rotation = random.randrange(0,360) 
-		
+		self.t2_wheel.rotation = random.randrange(0,360)
+
 		while self.t1_wheel.rotation == self.t2_wheel.rotation: # Ensure unique rotation values
 			self.t2_wheel.rotation = random.randrange(0,360)
-		
+
 		self.t1_wheel.render()
 		self.t2_wheel.render()
 
 		# Select target identities
 		self.t1_identity = random.sample(numbers,1)[0] # Select & assign identity
 		self.t2_identity = random.sample(numbers,1)[0]
-		
+
 		while self.t1_identity == self.t2_identity: # Ensure that T1 & T2 identities are unique
 			self.t2_identity = random.sample(numbers,1)[0]
 
@@ -234,7 +234,7 @@ class ABColour_TMTM(klibs.Experiment):
 
 		while self.t1_angle == self.t2_angle:
 			self.t2_angle = random.randrange(0,360)
-		
+
 		self.t1_colour = self.t1_wheel.color_from_angle(self.t1_angle) # Assign colouring
 		self.t2_colour = self.t2_wheel.color_from_angle(self.t2_angle)
 
@@ -253,7 +253,7 @@ class ABColour_TMTM(klibs.Experiment):
 
 		self.t2_colouring_rc.color_listener.set_wheel(self.t2_wheel)
 		self.t2_colouring_rc.color_listener.set_target(self.t2_dummy)
-		
+
 		if self.block_type == IDENTITY:
 			self.target_duration = self.id_target_duration
 			self.mask_duration = self.id_mask_duration
@@ -299,48 +299,84 @@ class ABColour_TMTM(klibs.Experiment):
 		# Present T1
 		fill()
 		blit(self.tmtm_stream['t1_target'], registration=5, location=P.screen_c)
-		flip()		
+		flip()
+
+		self.t1_sw = Stopwatch()
 
 		# Don't do anything during T1 presentation
 		while self.evm.before('T1_off', True): ui_request()
-		
+
+		self.t1_isi_sw = Stopwatch()
 		# Remove T1
 		fill()
 		flip()
+		self.t1_sw.pause()
+		print("T1 duration actual: " + str(self.t1_sw.elapsed()))
+		fill()
+		flip()
+
+
+
+
+
+		while self.evm.before('T1_mask_on',True): ui_request()
+
+		self.t1_isi_sw.pause()
+
+		print("ISI actual: " + str(self.t1_isi_sw.elapsed()))
 
 		# After one refresh rate (how long it takes to remove T1) present mask
 		fill()
 		blit(self.tmtm_stream['t1_mask'], registration=5, location=P.screen_c)
 		flip()
 
+		self.t1_mask_sw = Stopwatch()
+
 		# Don't do anything during presentation
 		while self.evm.before('T1_mask_off', True): ui_request()
-		
+
 		# Remove mask
 		fill()
 		flip()
+		self.t1_mask_sw.pause()
+		print("T1 mask duration actual: " + str(self.t1_mask_sw.elapsed()))
 
 		# If not practicing, present T2
 		if not P.practicing:
-			
+
 			# After TTOA is up, present T2
 			while self.evm.before('T2_on', True): ui_request()
-			
+
 			fill()
 			blit(self.tmtm_stream['t2_target'], registration=5, location=P.screen_c)
 			flip()
 
+			self.t2_sw = Stopwatch()
+
 			# Don't do anything during presentation
 			while self.evm.before('T2_off', True): ui_request()
+
+			self.t2_isi_sw = Stopwatch()
 
 			# Remove T2
 			fill()
 			flip()
 
+			self.t2_sw.pause()
+
+			fill()
+			flip()
+
+			while self.evm.before('T2_mask_on', True): ui_request()
+
+			self.t2_isi_sw.pause()
+
 			# After one refresh rate, present mask
 			fill()
 			blit(self.tmtm_stream['t2_mask'], registration=5, location=P.screen_c)
 			flip()
+
+			self.t2_mask_sw = Stopwatch()
 
 			# Don't do anything during presentation
 			while self.evm.before('T2_mask_off', True): ui_request()
@@ -348,6 +384,8 @@ class ABColour_TMTM(klibs.Experiment):
 			# Remove mask
 			fill()
 			flip()
+
+			self.t2_mask_sw.pause()
 
 		# Wait 1/3 second before asking for responses
 		while self.evm.before('response_foreperiod', True): ui_request()
@@ -359,31 +397,31 @@ class ABColour_TMTM(klibs.Experiment):
 
 			# Collect identity responses
 			self.t1_identity_rc.collect()
-			
+
 			if not P.practicing:
 				self.t2_identity_rc.collect()
 
 			# Assign to variables returned
 			t1_id_response, t1_id_rt = self.t1_identity_rc.keypress_listener.response()
-			
+
 			# No T2 present during practice
 			if not P.practicing:
 					t2_id_response, t2_id_rt = self.t2_identity_rc.keypress_listener.response()
 			else:
 				t2_id_response, t2_id_rt = ['NA','NA']
-			
+
 			# During practice, keep a tally of T1 performance
 			if P.practicing:
 				if t1_id_response == self.t1_identity:
 					self.t1_performance += 1
-		
+
 		else: # Colour block
 			# Not relevant to colour trials
 			t1_id_response, t1_id_rt, t2_id_response, t2_id_rt = ['NA','NA','NA','NA']
-			
-			# Collect colour responses 
+
+			# Collect colour responses
 			self.t1_colouring_rc.collect()
-			
+
 			if not P.practicing:
 				self.t2_colouring_rc.collect()
 
@@ -397,18 +435,23 @@ class ABColour_TMTM(klibs.Experiment):
 				t2_response_err, t2_response_err_rt = ['NA', 'NA']
 
 			if P.practicing:
-				# As numeric identities have 9 possible values, similarly the colour wheel can 
+				# As numeric identities have 9 possible values, similarly the colour wheel can
 				# be thought of as having 9 'bins' (each 40º wide). Colour responses are labelled
 				# as 'correct' if their angular error does not exceed 20º in either direction.
+
 				if (abs(t1_response_err) <= 20):
 					self.t1_performance += 1
 
 		clear()
 
+		print(self.target_duration)
+		print(self.mask_duration)
+
 		return {
 			"practicing": str(P.practicing),
 			"block_num": P.block_number,
 			"trial_num": P.trial_number,
+			"block_type": self.block_type,
 			"itoa": self.itoa,
 			"ttoa": self.ttoa,
 			"target_duration": self.target_duration,
@@ -429,7 +472,13 @@ class ABColour_TMTM(klibs.Experiment):
 			"t1_colour_rt": t1_response_err_rt,
 			"t2_ang_err": t2_response_err,
 			"t2_colour_rt": t2_response_err_rt,
-			"t1_performance_practice": self.t1_performance if P.practicing else 'NA'
+			"t1_performance_practice": self.t1_performance if P.practicing else 'NA',
+			"t1_duration_actual": self.t1_sw.elapsed(),
+			"t1_isi_actual": self.t1_isi_sw.elapsed(),
+			"t1_mask_duration_actual": self.t1_mask_sw.elapsed(),
+			"t2_duration_actual": self.t2_sw.elapsed() if not P.practicing else 'NA',
+			"t2_isi_actual": self.t2_isi_sw.elapsed() if not P.practicing else 'NA',
+			"t2_mask_duration_actual": self.t2_mask_sw.elapsed() if not P.practicing else 'NA'
 		}
 
 	def trial_clean_up(self):
@@ -439,40 +488,65 @@ class ABColour_TMTM(klibs.Experiment):
 
 		self.t1_colouring_rc.color_listener.reset()
 		self.t2_colouring_rc.color_listener.reset()
-		
+
 		# Performance checks during practice
-		if not self.practice_complete:
-			# First 10 trials considered an 'introductory' run, where no performance check is performed
-			if not self.pre_run_complete:
-				if self.practice_trial_num == 10:
-					
-					self.t1_performance = 0
-					self.pre_run_complete = True
-			else:
-				# Every 10 trials, check performance & adjust difficulty as necessary
-				if self.practice_trial_num % 10 == 0:
-					# If subj accuracy below 80%, 
-					if self.t1_performance > 8:
-						# Make task harder by adjusting target & mask durations
-						if self.block_type == IDENTITY:
-							if self.id_target_duration > P.refresh_time:
-								self.id_target_duration -= P.refresh_time
-								self.id_mask_duration += P.refresh_time
+		if P.practicing:
+			if not self.practice_complete:
+				# First 10 trials considered an 'introductory' run, where no performance check is performed
+				if not self.pre_run_complete:
+					if self.practice_trial_num == 10:
+
+						self.t1_performance = 0
+
+						self.pre_run_complete = True
+
+
+				else:
+						#else:
+						# Every 10 trials, check performance & adjust difficulty as necessary
+					if self.practice_trial_num % 10 == 0:
+
+						# If subj accuracy above 80%,
+						if self.t1_performance > 8:
+
+							# Make task harder by adjusting target & mask durations
+							if self.block_type == IDENTITY:
+								if self.id_target_duration > P.refresh_time:
+									self.id_target_duration -= P.refresh_time
+									self.id_mask_duration += P.refresh_time
+
+							else:
+								if self.col_target_duration > P.refresh_time:
+									self.col_target_duration -= P.refresh_time
+									self.col_mask_duration += P.refresh_time
+
 							self.t1_performance = 0
+
+						# Conversely, if performance is below/at chance, make easier
+						elif self.t1_performance <= 2:
+							if self.block_type == IDENTITY:
+								self.id_target_duration += P.refresh_time
+								self.id_mask_duration -= P.refresh_time
+
+
+							else:
+								self.col_target_duration += P.refresh_time
+								self.col_mask_duration -= P.refresh_time
+							self.t1_performance = 0
+
 						else:
-							if self.col_target_duration > P.refresh_time:
-								self.col_target_duration -= P.refresh_time
-								self.col_mask_duration += P.refresh_time
-							self.t1_performance = 0
-					# Otherwise, terminate practice
-					else:
-						
-						self.practice_complete = True
-			self.practice_trial_num += 1
+							self.t1_identity_performance = self.t1_performance
+							self.practice_complete = True
+
+
+				self.practice_trial_num += 1
+		else:
+			if P.trial_number == P.trials_per_block and P.block_number == 2:
+				self.block_type = COLOUR if self.block_type == IDENTITY else IDENTITY
 
 	def clean_up(self):
 		pass
-	
+
 	# --------------------------------- #
 	# Project specific helper functions
 	# --------------------------------- #
@@ -507,14 +581,14 @@ class ABColour_TMTM(klibs.Experiment):
 	def wheel_callback(self, wheel):
 		# Hide cursor during selection phase
 		hide_mouse_cursor()
-		
+
 		# Response request msg
 		colour_request_msg = self.t1_col_request if wheel == self.t1_wheel else self.t2_col_request
 		message_offset = deg_to_px(1.5)
 		message_loc = (P.screen_c[0], (P.screen_c[1]-message_offset))
 
 		fill()
-		
+
 		# Present appropriate wheel
 		if wheel == self.t1_wheel:
 			blit(self.t1_wheel, registration=5, location=P.screen_c)
@@ -524,13 +598,13 @@ class ABColour_TMTM(klibs.Experiment):
 		message(colour_request_msg, location=message_loc, registration=5, blit_txt=True)
 		# Present annulus drawbject as cursor
 		blit(self.cursor,registration=5,location=mouse_pos())
-		
+
 		flip()
 
 	def identity_callback(self, target):
 		# Request appropriate identity
 		identity_request_msg = self.t1_id_request if target == "T1" else self.t2_id_request
-		
+
 		fill()
 		message(identity_request_msg, location=P.screen_c, registration=5, blit_txt=True)
 		flip()
@@ -538,9 +612,9 @@ class ABColour_TMTM(klibs.Experiment):
 
 	def generate_mask(self):
 		# Set mask size
-		canvas_size = deg_to_px(1.5)
+		canvas_size = deg_to_px(1)
 		# Set cell size
-		cell_size = canvas_size / 4 # Mask comprised of 16 smaller cells arranged 4x4
+		cell_size = canvas_size / 5 # Mask comprised of 16 smaller cells arranged 4x4
 		# Each cell has a black outline
 		cell_outline_width = deg_to_px(.05)
 
@@ -553,8 +627,8 @@ class ABColour_TMTM(klibs.Experiment):
 		transparent_pen = aggdraw.Pen((0,0,0),cell_outline_width)
 
 		# Generate cells, arranged in 4x4 array
-		for row in [0,1,2,3]:
-			for col in [0,1,2,3]:
+		for row in [0,1,2,3,4]:
+			for col in [0,1,2,3,4]:
 				# Randomly select colour for each cell
 				cell_colour = const_lum[random.randrange(0,360)]
 				# Brush to apply colour

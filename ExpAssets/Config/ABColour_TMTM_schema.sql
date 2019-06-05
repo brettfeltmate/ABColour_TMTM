@@ -24,7 +24,7 @@ To do this, modify this document as needed, then rebuild the project database by
 
 while within the root of your project folder.
 
-But be warned: THIS WILL DELETE ALL YOUR CURRENT DATA. The database will be completely 
+But be warned: THIS WILL DELETE ALL YOUR CURRENT DATA. The database will be completely
 destroyed and rebuilt. If you wish to keep the data you currently have, run:
 
   klibs export
@@ -45,7 +45,7 @@ CREATE TABLE participants (
 	id integer primary key autoincrement not null,
 	userhash text not null,
 	gender text not null,
-	age integer not null, 
+	age integer not null,
 	handedness text not null,
 	created text not null
 );
@@ -56,6 +56,7 @@ CREATE TABLE trials (
 	practicing text not null,
 	block_num integer not null,
 	trial_num integer not null,
+	block_type text not null,
 	itoa text not null,
 	ttoa text not null,
 	target_duration text not null,
@@ -76,5 +77,11 @@ CREATE TABLE trials (
 	t1_colour_rt text not null,
 	t2_ang_err text not null,
 	t2_colour_rt text not null,
-	t1_performance_practice text not null
+	t1_performance_practice text not null,
+	t1_duration_actual text not null,
+	t1_isi_actual text not null,
+	t1_mask_duration_actual text not null,
+	t2_duration_actual text not null,
+	t2_isi_actual text not null,
+	t2_mask_duration_actual text not null
 );
